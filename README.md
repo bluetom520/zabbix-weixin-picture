@@ -1,7 +1,7 @@
-ZABBIX可以实现短信、邮件、微信等各种报警，这三种基本大家都很熟悉， 现在基于微信写py，感觉钉钉的团队是从微信出来的，变量都不改，太懒了，说可以实现微信报警苍老师说过：Life is short,you need python!
+ZABBIX可以实现短信、邮件、微信等各种报警，这三种基本大家都很熟悉， 现在基于微信写py，之前写了个无图的，感觉微信色彩不丰富，再加个有图的，说可以实现微信报警，苍老师的话牢记心头：Life is short,you need python!
 
 [TOC]
-### 1 微信配置
+### 1 微信配置（与无图版一样）
 微信公众号官网：https://qy.weixin.qq.com/
 我们主要获取四个参数：部门id，应用ID和CorpID和CorpSecret
 #### 1.1 注册安装
@@ -10,20 +10,42 @@ ZABBIX可以实现短信、邮件、微信等各种报警，这三种基本大�
 在通信录管理里面设置部门，如下图，我们这里设置的运维部，这个部门id要记住，在ZABBIX里面要配置这个名称，然后把你需要发送告警的人员添加到这个部门里面
 ##### 1.1.2 应用设置
 点击左侧“应用中心”，新建消息型应用，应用名称为“服务器报警”，“应用可见范围”，添加刚刚新建的子部门（运维部），点击“服务器报警”，记录应用ID
-##### 1.1.3 微应用设置
+##### 1.1.3 权限管理
 点击左侧“设置”，权限管理，新建普通管理组，名称填写“服务器报警组”。点击修改“通讯录权限”，勾选管理，点击修改“应用权限”，勾选刚刚创建的“服务器报警”，点击刚刚创建的“服务器报警组”，记录左侧的CorpID与CorpSecret
 ### 2 程序配置
-代码托管到github：https://github.com/bluetom520/zabbix-weixin
+代码托管到github：https://github.com/bluetom520/zabbix-weixin-picture
+下载
 ```
-git clone https://github.com/bluetom520/zabbix-weixin.git
+git clone https://github.com/bluetom520/zabbix-weixin-picture.git
+```
+安装requests
+```
 pip install requests/requests-2.12.4-py2.py3-none-any.whl
-cp dingding/* /usr/lib/zabbix/alertscripts/
-chown -R zabbix:zabbix /usr/lib/zabbix/alertscripts/dingding.py
-chmod +x   /usr/lib/zabbix/alertscripts/dingding.py
-chmod a+w /usr/lib/zabbix/alertscripts/config.ini
-
 ```
-修改config.ini，把上节获得的三个参数填入，web是点击报警信息后跳转的页面，设置的监控数据的最新出图，但手机浏览器不支持。后面看怎么把图抓下来放到微信报警里面，抓图早已经实现了，看大家有没有兴趣了，有兴趣我加再加：）
+安装selenium
+```
+tar zxvf selenium-3.0.2.tar.gz
+cd selenium-3.0.2
+python setup.py install
+```
+安装phantomjs
+```
+rpm -Uvh freetype-2.4.11-12.el7.x86_64.rpm
+rpm -Uvh  fontconfig-2.10.95-10.el7.x86_64.rpm
+tar -jxvf phantomjs-2.1.1-linux-x86_64.tar.bz2
+mv phantomjs-2.1.1-linux-x86_64 /usr/local/phantomjs-2.1.1
+```
+程序部署
+```
+cp zabbix-weixin-picture/* /usr/lib/zabbix/alertscripts/
+cd /usr/lib/zabbix/alertscripts/
+chown -R zabbix:zabbix pic
+chown -R zabbix:zabbix weixin.py
+chmod o+x weixin.py
+chown -R zabbix:zabbix config.ini
+chmod o+w config.ini
+```
+修改config.ini，把上节获得的三个参数填入，web 设置为zabbix服务器主页，是点击报警信息后跳转的页面，设置的监控数据的最新出图。
 ```
 [wei]
 corpid = wx3317042c8bcf7551
@@ -43,40 +65,6 @@ web = http://192.168.1.199/zabbix/
 到配置-》动作-》创建动作（触发器）
  - 动作
 ![](leanote://file/getImage?fileId=587089ffd31d9c3103000006)
-```
-服务器:{HOST.NAME}: {TRIGGER.NAME}已恢复!
-
-{
-"告警主机":"{HOST.NAME}",
-"告警地址":"{HOST.IP}",
-"告警时间":"{EVENT.DATE} {EVENT.TIME}",
-"恢复时间":"{EVENT.RECOVERY.DATE} {EVENT.RECOVERY.TIME}",
-"告警等级":"{TRIGGER.SEVERITY}",
-"告警信息":"{TRIGGER.NAME}",
-"监控项目":"{ITEM.NAME}",
-"当前状态":"{TRIGGER.STATUS}",
-"持续时间":"{EVENT.AGE}",
-"事件ID":"{EVENT.ID}",
-"监控ID":"{ITEM.ID}",
-"监控取值":"{ITEM.LASTVALUE}"
-}
-
-服务器:{HOST.NAME}发生: {TRIGGER.NAME}故障!
-
-{
-"告警主机":"{HOST.NAME}",
-"告警地址":"{HOST.IP}",
-"告警时间":"{EVENT.DATE} {EVENT.TIME}",
-"告警等级":"{TRIGGER.SEVERITY}",
-"告警信息":"{TRIGGER.NAME}",
-"监控项目":"{ITEM.NAME}",
-"当前状态":"{TRIGGER.STATUS}",
-"持续时间":"{EVENT.AGE}",
-"事件ID":"{EVENT.ID}",
-"监控ID":"{ITEM.ID}",
-"监控取值":"{ITEM.LASTVALUE}"
-}
-```
  - 条件
 ![](leanote://file/getImage?fileId=58708a1dd31d9c3103000007)
  - 操作
@@ -84,25 +72,12 @@ web = http://192.168.1.199/zabbix/
 
 ### 4 效果展现
 故障图
-![](leanote://file/getImage?fileId=587388a24f1ffe4e59000004)
+![](leanote://file/getImage?fileId=5874b25d2eb3ec5799000005)
 恢复图
-![](leanote://file/getImage?fileId=587388ae4f1ffe4e59000005)
+![](leanote://file/getImage?fileId=5874b2292eb3ec5799000004)
 
 ### 5 docker环境修改
-```
-tar zxvf  requests-2.12.4.tar.gz
-docker cp requests-2.12.4 zabbix:/usr/local/share/zabbix/alertscripts
-docker cp dingding zabbix:/usr/local/share/zabbix/alertscripts
-docker exec -it zabbix /bin/bash
-cd /usr/local/share/zabbix/alertscripts/requests-2.12.4
-python setup.py install
-rm -rf requests-2.12.4
-cd ..
-mv zabbix-weixin/* .
-vi config.ini
-exit
-docker restart zabbix
+参照无图版
 
-```
-## 具体内容参考：https://note.gitcloud.cc/blog/post/bluetom520/%E9%92%89%E9%92%89%E6%8A%A5%E8%AD%A6%E6%A8%A1%E6%9D%BF
+
 
