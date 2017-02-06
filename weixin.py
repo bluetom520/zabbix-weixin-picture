@@ -6,12 +6,15 @@ import requests
 import sys
 import json
 import time
+import Image
 from conf.INIFILES import read_config, write_config
 from selenium import webdriver
 import os
 import datetime
 from conf.BLog import Log
 from get_pic import getpic
+import re
+from lxml import etree
 reload(sys)
 sys.setdefaultencoding('utf-8')
 
@@ -96,35 +99,41 @@ def main(send_to, subject, content):
         CorpSecret = read_config(config_file_path, 'wei', "CorpSecret")
         agentid = read_config(config_file_path, 'wei', "agentid")
         web = read_config(config_file_path, 'wei', "web")
-        content = json.loads(content)
+        # content = json.loads(content)
         messages["message_url"] = web
-        itemid = content[u'监控ID']
-        body["url"] = web + "history.php?action=showgraph&itemids[]=" + itemid
+        root = etree.fromstring(content)
+        itemid = root.xpath(u"监控ID")[0].text
+        itemvalue = root.xpath(u"监控取值")[0].text
+        s = re.match(r'^[0-9\.]+$', itemvalue)
+        if s:
+            body["url"] = web + "history.php?action=showgraph&itemids[]=" + itemid
+        else:
+            body["url"] = web + "history.php?action=showvalues&itemids[]=" + itemid
         warn_message = ''
-        if content[u'当前状态'] == 'PROBLEM':
+        if root.xpath(u"当前状态")[0].text == 'PROBLEM':
             body["title"] = "服务器故障"
             warn_message += subject + '\n'
             warn_message += '详情：\n'
-            warn_message += '告警等级：'+ content[u'告警等级'] + '\n'
-            warn_message += '告警时间：'+ content[u'告警时间'] + '\n'
-            warn_message += '告警地址：'+ content[u'告警地址'] + '\n'
-            warn_message += '持续时间：'+ content[u'持续时间'] + '\n'
-            warn_message += '监控项目：'+ content[u'监控项目'] + '\n'
-            warn_message += content[u'告警主机'] + '故障(' + content[u'事件ID']+ ')'
+            warn_message += '告警等级：' + root.xpath(u"告警等级")[0].text + '\n'
+            warn_message += '告警时间：' + root.xpath(u"告警时间")[0].text + '\n'
+            warn_message += '告警地址：' + root.xpath(u"告警地址")[0].text + '\n'
+            warn_message += '持续时间：' + root.xpath(u"持续时间")[0].text + '\n'
+            warn_message += '监控项目：' + root.xpath(u"监控项目")[0].text + '\n'
+            warn_message += root.xpath(u"告警主机")[0].text + '故障(' + root.xpath(u"事件ID")[0].text+ ')'
         else:
             body["title"] = "服务器恢复"
             warn_message += subject + '\n'
             warn_message += '详情：\n'
-            warn_message += '告警等级：'+ content[u'告警等级'] + '\n'
-            warn_message += '恢复时间：'+ content[u'恢复时间'] + '\n'
-            warn_message += '告警地址：'+ content[u'告警地址'] + '\n'
-            warn_message += '持续时间：'+ content[u'持续时间'] + '\n'
-            warn_message += '监控项目：'+ content[u'监控项目'] + '\n'
-            warn_message += content[u'告警主机'] + '恢复(' + content[u'事件ID']+ ')'
+            warn_message += '告警等级：' +  root.xpath(u"告警等级")[0].text + '\n'
+            warn_message += '恢复时间：' +  root.xpath(u"恢复时间")[0].text + '\n'
+            warn_message += '告警地址：' +  root.xpath(u"告警地址")[0].text + '\n'
+            warn_message += '持续时间：' +  root.xpath(u"持续时间")[0].text + '\n'
+            warn_message += '监控项目：' +  root.xpath(u"监控项目")[0].text + '\n'
+            warn_message += root.xpath(u"告警主机")[0].text + '恢复(' +  root.xpath(u"事件ID")[0].text+ ')'
         body["title"] = "服务器故障"
         body['description'] = warn_message
         wx = WeiXin(CorpID, CorpSecret)
-        pic_path = getpic(itemid)
+        pic_path = getpic(itemid, s)
         picurl = wx.get_imaging(pic_path)
         body['picurl'] = picurl
         data = []
@@ -146,7 +155,6 @@ def get_path():
 
 def logwrite(sendstatus, content):
     logpath = '/var/log/zabbix/weixin'
-    # logpath = "log"
     if not sendstatus:
         content = senderr
     t = datetime.datetime.now()
@@ -157,7 +165,7 @@ def logwrite(sendstatus, content):
     logger.info(content)
 
 
-def get_item_pic(url, user, passwd, itemid):
+def get_item_pic(url, user, passwd, itemid, flag):
     try:
         driver = webdriver.PhantomJS("/usr/local/phantomjs-2.1.1/bin/phantomjs",service_log_path=os.path.devnull)
         # driver = webdriver.PhantomJS(executable_path='/usr/local/phantomjs-2.1.1/bin/phantomjs', service_log_path='/var/log/ghostdriver.log', service_args=["--webdriver-loglevel=NONE"])
@@ -167,18 +175,22 @@ def get_item_pic(url, user, passwd, itemid):
         driver.find_element_by_id("name").send_keys(user)     #输入用户名
         driver.find_element_by_id("password").send_keys(passwd)     #输入用户名
         driver.find_element_by_id("enter").click()
-        item_url = url + "history.php?action=showgraph&fullscreen=1&itemids[]=" + itemid
+        if flag:
+            item_url = url + "history.php?action=showgraph&fullscreen=1&itemids[]=" + itemid
+        else:
+            item_url = url + "history.php?action=showvalues&fullscreen=1&itemids[]=" + itemid
         driver.get(item_url)
         temp_name = picpath+"/"+itemid + "_" + datetime.datetime.now().strftime("%Y%m%d%H%M%S") + ".png"
         time.sleep(0.5)
         driver.save_screenshot(temp_name)
         driver.close()
         driver.quit()
-        return temp_name
         # shutil.move(temp_name, backpath)
-        # im = Image.open(temp_name)
-        # im = im.crop((0, 0, 640, 480))
-        # im.save(temp_name)
+        if not flag:
+            im = Image.open(temp_name)
+            im = im.crop((0, 0, 640, 480))
+            im.save(temp_name)
+        return temp_name
     except Exception, e:
         global senderr
         senderr = str(e)
@@ -187,13 +199,13 @@ def get_item_pic(url, user, passwd, itemid):
     logwrite(sendstatus, e)
 
 
-def getpic(item_id):
+def getpic(item_id, s):
     try:
         config_file_path = get_path()
         user = read_config(config_file_path, 'zabbix', "user")
         passwd = read_config(config_file_path, 'zabbix', "passwd")
         url = read_config(config_file_path, 'wei', "web")
-        ppath = get_item_pic(url, user=user, passwd=passwd, itemid=item_id)
+        ppath = get_item_pic(url, user=user, passwd=passwd, itemid=item_id, flag=s)
         global sendstatus
         sendstatus = True
         return ppath

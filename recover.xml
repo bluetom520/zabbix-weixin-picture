@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<root>
+    <告警主机>{HOST.NAME}</告警主机>
+    <告警地址>{HOST.IP}</告警地址>
+    <告警时间>{EVENT.DATE} {EVENT.TIME}</告警时间>
+    <恢复时间>{EVENT.RECOVERY.DATE} {EVENT.RECOVERY.TIME}</恢复时间>
+    <告警等级>{TRIGGER.SEVERITY}</告警等级>
+    <告警信息>{TRIGGER.NAME}</告警信息>
+    <监控项目>{ITEM.NAME}</监控项目>
+    <当前状态>{TRIGGER.STATUS}</当前状态>
+    <持续时间>{EVENT.AGE}</持续时间>
+    <事件ID>{EVENT.ID}</事件ID>
+    <监控取值>{ITEM.LASTVALUE}</监控取值>
+    <监控ID>{ITEM.ID}</监控ID>
+</root>

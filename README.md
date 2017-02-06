@@ -18,20 +18,14 @@ ZABBIX可以实现短信、邮件、微信等各种报警，这三种基本大�
 ```
 git clone https://github.com/bluetom520/zabbix-weixin-picture.git
 ```
-安装requests
+依赖包
 ```
-pip install requests/requests-2.12.4-py2.py3-none-any.whl
-```
-安装selenium
-```
-tar zxvf selenium-3.0.2.tar.gz
-cd selenium-3.0.2
-python setup.py install
+image==1.5.5
+lxml==3.5.0
+selenium==3.0.2
 ```
 安装phantomjs
 ```
-rpm -Uvh freetype-2.4.11-12.el7.x86_64.rpm
-rpm -Uvh  fontconfig-2.10.95-10.el7.x86_64.rpm
 tar -jxvf phantomjs-2.1.1-linux-x86_64.tar.bz2
 mv phantomjs-2.1.1-linux-x86_64 /usr/local/phantomjs-2.1.1
 ```
@@ -65,6 +59,7 @@ web = http://192.168.1.199/zabbix/
 到配置-》动作-》创建动作（触发器）
  - 动作
 ![](leanote://file/getImage?fileId=587089ffd31d9c3103000006)
+
  - 条件
 ![](leanote://file/getImage?fileId=58708a1dd31d9c3103000007)
  - 操作
