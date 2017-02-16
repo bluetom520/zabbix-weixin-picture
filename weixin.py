@@ -104,7 +104,8 @@ def main(send_to, subject, content):
         root = etree.fromstring(content)
         itemid = root.xpath(u"监控ID")[0].text
         itemvalue = root.xpath(u"监控取值")[0].text
-        s = re.match(r'^[0-9\.]+$', itemvalue)
+        s = re.match(r'^[0-9\.]+(\s\w{0,3})?$', itemvalue)
+        # s = re.match(r'^[0-9\.]+$', itemvalue.split(' ')[0])
         if s:
             body["url"] = web + "history.php?action=showgraph&itemids[]=" + itemid
         else:
