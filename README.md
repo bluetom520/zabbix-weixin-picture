@@ -72,7 +72,9 @@ web = http://192.168.1.199/zabbix/
 ![](leanote://file/getImage?fileId=5874b2292eb3ec5799000004)
 
 ### 5 docker环境修改
-参照无图版
+> * 参照无图版
+
+
 ### 如果你觉得微信报警对你有帮助, 可以对作者进行小额捐款(微信)
 
 ![weixin](weixin.jpg)
