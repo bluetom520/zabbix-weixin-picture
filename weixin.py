@@ -71,21 +71,54 @@ class WeiXin(object):
         except:
             self.__raise_error(res)
 
-    def get_media_ID(self, path):
+    def send_message_mediaid(self, agentid, messages, userid='', toparty=''):
+        payload = {
+            'touser': userid,
+            'toparty': toparty,
+            'agentid': agentid,
+            "msgtype": "mpnews",
+            "mpnews": messages
+        }
+        headers = {'content-type': 'application/json'}
+        data = json.dumps(payload, ensure_ascii=False).encode('utf-8')
         params = self.__token_params
-        params['type'] = 'image\r\n'
-        data = {'media': open(path, 'rb')}
-        r = requests.post(url=self.img_url, params=params, files=data)
-        dict = r.json()
-        return dict['media_id']
+        res = requests.post(self.url_send, headers=headers, params=params, data=data)
+        try:
+            return res.json()
+        except:
+            self.__raise_error(res)
+
+    def get_media_ID(self, path):
+        try:
+            params = self.__token_params
+            params['type'] = "image"
+            data = {'media': open(path, 'rb')}
+            r = requests.post(url=self.img_url, params=params, files=data)
+            dict = r.json()
+            return dict['media_id']
+        except:
+            self.__raise_error(r)
 
     def get_imaging(self, path):
-        params = self.__token_params
-        data = {'media': open(path, 'rb')}
-        r = requests.post(url=self.url_uploadimg, params=params, files=data)
-        dict = r.json()
-        return dict['url']
+        try:
+            params = self.__token_params
+            data = {'media': open(path, 'rb')}
+            r = requests.post(url=self.url_uploadimg, params=params, files=data)
+            dict = r.json()
+            return dict['url']
+        except:
+            self.__raise_error(r)
 
+    def get_image(self, path):
+        try:
+            params = self.__token_params
+            headers = {'content-type': 'application/json'}
+            data = {'type': "image", 'media': open(path, 'rb')}
+            r = requests.post(url=self.img_url, params=params, headers=headers, files=data)
+            dict = r.json()
+            return dict['url']
+        except:
+            self.__raise_error(r)
 
 def main(send_to, subject, content):
     try:
@@ -99,6 +132,7 @@ def main(send_to, subject, content):
         CorpSecret = read_config(config_file_path, 'wei', "CorpSecret")
         agentid = read_config(config_file_path, 'wei', "agentid")
         web = read_config(config_file_path, 'wei', "web")
+        author = read_config(config_file_path, 'wei', "author")
         # content = json.loads(content)
         messages["message_url"] = web
         root = etree.fromstring(content)
@@ -107,9 +141,9 @@ def main(send_to, subject, content):
         s = re.match(r'^[0-9\.]+(\s\w{0,3})?$', itemvalue)
         # s = re.match(r'^[0-9\.]+$', itemvalue.split(' ')[0])
         if s:
-            body["url"] = web + "history.php?action=showgraph&itemids[]=" + itemid
+            body["content_source_url"] = web + "history.php?action=showgraph&itemids[]=" + itemid
         else:
-            body["url"] = web + "history.php?action=showvalues&itemids[]=" + itemid
+            body["content_source_url"] = web + "history.php?action=showvalues&itemids[]=" + itemid
         warn_message = ''
         if root.xpath(u"当前状态")[0].text == 'PROBLEM':
             body["title"] = "服务器故障"
@@ -131,16 +165,38 @@ def main(send_to, subject, content):
             warn_message += '持续时间：' +  root.xpath(u"持续时间")[0].text + '\n'
             warn_message += '监控项目：' +  root.xpath(u"监控项目")[0].text + '\n'
             warn_message += root.xpath(u"告警主机")[0].text + '恢复(' +  root.xpath(u"事件ID")[0].text+ ')'
-        body["title"] = "服务器故障"
-        body['description'] = warn_message
+        body['digest'] = warn_message
+        warn_message = ''
+        if root.xpath(u"当前状态")[0].text == 'PROBLEM':
+            body["title"] = "服务器故障"
+            warn_message += '<p><span style="color:#E53333;"><strong>'+subject + '</strong></span></p>' + '\n'
+            warn_message += '<p><span style="color:#E56600;"><strong>'+'详情：' + '</strong></span></p>' + '\n'
+            warn_message += '<p><span style="color:#4C33E5;"><strong>'+'告警等级：' + root.xpath(u"告警等级")[0].text + '</strong></span></p>' + '\n'
+            warn_message += '<p><span style="color:#4C33E5;"><strong>'+'告警时间：' + root.xpath(u"告警时间")[0].text + '</strong></span></p>'+ '\n'
+            warn_message += '<p><span style="color:#4C33E5;"><strong>'+'告警地址：' + root.xpath(u"告警地址")[0].text + '</strong></span></p>'+ '\n'
+            warn_message += '<p><span style="color:#4C33E5;"><strong>'+'持续时间：' + root.xpath(u"持续时间")[0].text + '</strong></span></p>'+ '\n'
+            warn_message += '<p><span style="color:#4C33E5;"><strong>'+'监控项目：' + root.xpath(u"监控项目")[0].text + '</strong></span></p>'+ '\n'
+            warn_message += '<p><span><em><span style="color:#E53333;">'+root.xpath(u"告警主机")[0].text + '故障(' + root.xpath(u"事件ID")[0].text+ ')'+'</span></em><br/></span></p>'
+        else:
+            body["title"] = "服务器恢复"
+            warn_message += '<p><span style="color:#009900;"><strong>'+subject + '</strong></span></p>' + '\n'
+            warn_message += '<p><span style="color:#E56600;"><strong>'+'详情：' + '</strong></span></p>' + '\n'
+            warn_message += '<p><span style="color:#4C33E5;"><strong>'+'告警等级：' + root.xpath(u"告警等级")[0].text + '</strong></span></p>' + '\n'
+            warn_message += '<p><span style="color:#4C33E5;"><strong>'+'恢复时间：' + root.xpath(u"恢复时间")[0].text + '</strong></span></p>'+ '\n'
+            warn_message += '<p><span style="color:#4C33E5;"><strong>'+'告警地址：' + root.xpath(u"告警地址")[0].text + '</strong></span></p>'+ '\n'
+            warn_message += '<p><span style="color:#4C33E5;"><strong>'+'持续时间：' + root.xpath(u"持续时间")[0].text + '</strong></span></p>'+ '\n'
+            warn_message += '<p><span style="color:#4C33E5;"><strong>'+'监控项目：' + root.xpath(u"监控项目")[0].text + '</strong></span></p>'+ '\n'
+            warn_message += '<p><span><em><span style="color:#009900;">'+root.xpath(u"告警主机")[0].text + '恢复(' + root.xpath(u"事件ID")[0].text+ ')'+'</span></em><br/></span></p>'
+        body['content'] = warn_message
+        body['author'] = author
         wx = WeiXin(CorpID, CorpSecret)
         pic_path = getpic(itemid, s)
-        picurl = wx.get_imaging(pic_path)
-        body['picurl'] = picurl
+        picurl = wx.get_media_ID(pic_path)
+        body['thumb_media_id'] = picurl
         data = []
         data.append(body)
         messages['articles'] = data
-        data = wx.send_message(toparty=send_to, agentid=agentid, messages=messages)
+        data = wx.send_message_mediaid(toparty=send_to, agentid=agentid, messages=messages)
         sendstatus = True
     except Exception, e:
         senderr = str(e)
@@ -182,6 +238,7 @@ def get_item_pic(url, user, passwd, itemid, flag):
             item_url = url + "history.php?action=showvalues&fullscreen=1&itemids[]=" + itemid
         driver.get(item_url)
         temp_name = picpath+"/"+itemid + "_" + datetime.datetime.now().strftime("%Y%m%d%H%M%S") + ".png"
+        # logwrite(True, temp_name)
         time.sleep(0.5)
         driver.save_screenshot(temp_name)
         driver.close()
